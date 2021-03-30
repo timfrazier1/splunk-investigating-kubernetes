@@ -1,0 +1,891 @@
+<form hideEdit="false">
+  <label>K8s User Investigation</label>
+  <search>
+    <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| iplocation sourceIPs{} | search lat=$lat_value lon=$lon_value$</query>
+    <earliest>$period.earliest$</earliest>
+    <latest>$period.latest$</latest>
+  </search>
+  <fieldset submitButton="false">
+    <input type="time" token="period" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>0</earliest>
+        <latest></latest>
+      </default>
+    </input>
+    <input type="multiselect" token="filter_user" searchWhenChanged="true">
+      <label>Username</label>
+      <default>*</default>
+      <choice value="*">Any</choice>
+      <valuePrefix>user.username="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>user.username</fieldForLabel>
+      <fieldForValue>user.username</fieldForValue>
+      <search>
+        <query>`k8-audit-index` $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| stats count by user.username</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+    </input>
+    <input type="multiselect" token="filter_action" searchWhenChanged="true">
+      <label>Action / Verb</label>
+      <choice value="*">Any</choice>
+      <choice value="create">CREATE</choice>
+      <choice value="delete">DELETE</choice>
+      <choice value="deletecollection">DELETECOLLECTION</choice>
+      <choice value="get">GET</choice>
+      <choice value="list">LIST</choice>
+      <choice value="patch">PATCH</choice>
+      <choice value="post">POST</choice>
+      <choice value="proxy">PROXY</choice>
+      <choice value="put">PUT</choice>
+      <choice value="update">UPDATE</choice>
+      <choice value="watch">WATCH</choice>
+      <default>*</default>
+      <valuePrefix>verb=</valuePrefix>
+      <delimiter> OR </delimiter>
+    </input>
+    <input type="text" token="filter_src" searchWhenChanged="true">
+      <label>Remote Client IP Address</label>
+      <prefix>sourceIPs{}="</prefix>
+      <suffix>"</suffix>
+      <default>*</default>
+    </input>
+    <input type="multiselect" token="filter_resource" searchWhenChanged="true">
+      <label>Resource Type</label>
+      <choice value="*">Any</choice>
+      <default>*</default>
+      <valuePrefix>objectRef.resource="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>objectRef.resource</fieldForLabel>
+      <fieldForValue>objectRef.resource</fieldForValue>
+      <change>
+        <condition label="Any">
+          <set token="filter_resource">(objectRef.resource=* OR NOT objectRef.resource=*)</set>
+        </condition>
+      </change>
+      <search>
+        <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_statuscode$ $filter_namespace$
+| stats count by objectRef.resource</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+    </input>
+    <input type="multiselect" token="filter_namespace" searchWhenChanged="true">
+      <label>Namespace</label>
+      <choice value="*">Any</choice>
+      <default>*</default>
+      <valuePrefix>objectRef.namespace="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>objectRef.namespace</fieldForLabel>
+      <fieldForValue>objectRef.namespace</fieldForValue>
+      <change>
+        <condition label="Any">
+          <set token="filter_namespace">(objectRef.namespace=* OR NOT objectRef.namespace=*)</set>
+        </condition>
+      </change>
+      <search>
+        <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$
+| stats count by objectRef.namespace</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+    </input>
+    <input type="multiselect" token="filter_statuscode" searchWhenChanged="true">
+      <label>Status Code</label>
+      <choice value="*">Any</choice>
+      <default>*</default>
+      <valuePrefix>responseStatus.code=</valuePrefix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>responseStatus.code</fieldForLabel>
+      <fieldForValue>responseStatus.code</fieldForValue>
+      <search>
+        <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ 
+| stats count by responseStatus.code</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <html>
+      <p>
+          <b>PREREQUISITE</b>: Must use Splunk Connect for Kubernetes (https://splunkbase.splunk.com/app/4497/) for getting data in.<br/>
+          <b>IMPORTANT</b>: To use this dashboard, modify the<font face="courier"> k8-audit-index </font>search macro to the index and sourcetype for your audit logs from kube-apiserver.
+      </p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="underLabel">MATCHING RESULTS</option>
+        <drilldown>
+          <set token="show_all">true</set>
+          <unset token="show_failed"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ (responseStatus.code&gt;=400) 
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">FAILED ACTIVITY COUNT</option>
+        <drilldown>
+          <set token="show_failed">true</set>
+          <unset token="show_all"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <title>403 Forbidden</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403 
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">FORBIDDEN ACTIVITY COUNT</option>
+        <drilldown>
+          <set token="show_forbid">true</set>
+          <unset token="show_failed"></unset>
+          <unset token="show_all"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <title>401 Unauthorized</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401 
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">UNAUTHORIZED ACTIVITY COUNT</option>
+        <drilldown>
+          <set token="show_unauthorized">true</set>
+          <unset token="show_failed"></unset>
+          <unset token="show_all"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+  </row>
+  <row depends="$show_failed$">
+    <panel>
+      <title>Failed Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ (responseStatus.code&gt;=400)
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ (responseStatus.code&gt;=400)
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ (responseStatus.code&gt;=400)
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_all$">
+    <panel>
+      <title>API Server Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$ 
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+      <table depends="$show_all$">
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name objectRef.namespace verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.namespace AS "Namespace" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+        <drilldown>
+          <condition field="Namespace">
+            <set token="activity_drilldown">true</set>
+            <set token="object_name">$row.Namespace$</set>
+            <set token="activity_drilldown_title">Namespace Details for</set>
+            <set token="object_st">namespaces</set>
+            <set token="namespace_search">true</set>
+            <unset token="pod_search"></unset>
+            <unset token="node_search"></unset>
+          </condition>
+          <condition match="'row.Resource Type'==&quot;pods&quot;">
+            <set token="activity_drilldown">true</set>
+            <set token="pod_client">$row.Remote Client IP$</set>
+            <set token="object_name">$row.Involved Object$</set>
+            <set token="activity_drilldown_title">Pod Activity Overview for</set>
+            <set token="object_st">pods</set>
+            <set token="pod_search">true</set>
+            <unset token="node_search"></unset>
+            <unset token="namespace_search"></unset>
+          </condition>
+          <condition match="'row.Resource Type'==&quot;nodes&quot;">
+            <set token="activity_drilldown">true</set>
+            <set token="pod_client">$row.Remote Client IP$</set>
+            <set token="object_name">$row.Involved Object$</set>
+            <set token="activity_drilldown_title">Node Activity Overview for</set>
+            <set token="object_st">nodes</set>
+            <set token="node_search">true</set>
+            <unset token="pod_search"></unset>
+            <unset token="namespace_search"></unset>
+          </condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row depends="$activity_drilldown$">
+    <panel>
+      <title>$activity_drilldown_title$ $object_name$</title>
+      <!--
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-objects-index` sourcetype="kube:objects:$object_st$" 
+| spath metadata 
+| search "metadata.name"="$object_name$*" 
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-objects-index` sourcetype="kube:objects:$object_st$" 
+| spath metadata 
+| search "metadata.name"="$object_name$*"
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      -->
+      <table depends="$pod_search$">
+        <search>
+          <query>`k8-objects-index` sourcetype="kube:objects:$object_st$" 
+| spath metadata 
+| search "metadata.name"="$object_name$*" 
+| table _time status.podIP status.hostIP metadata.name metadata.namespace metadata.labels* 
+| rename status.podIP AS "Pod IP" status.hostIP AS "Host IP" metadata.name AS "Pod Name" metadata.namespace AS Namespace</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+      <table depends="$namespace_search$">
+        <search>
+          <query>`k8-objects-index` sourcetype="kube:objects:$object_st$" 
+| spath metadata | spath spec
+| search "metadata.name"="$object_name$*" 
+| stats count by metadata.creationTimestamp metadata.name metadata.selfLink
+| fields - count
+          </query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_forbid$">
+    <panel>
+      <title>Forbidden Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name objectRef.namespace verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.namespace AS "Namespace" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_unauthorized$">
+    <panel>
+      <title>Unauthorized Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name objectRef.namespace verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.namespace AS "Namespace" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+      <p>
+          Click on a value in the legend to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Status Codes Over Time</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| timechart count by responseStatus.code 
+| rename responseStatus.code AS "HTTP Response Code"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_statuscode">$click.name2$</set>
+          <set token="form.filter_statuscode">$click.name2$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+      <p>
+          Click on a value in the legend to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Activity Over Time by Remote Client IP</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_statuscode$ $filter_resource$ $filter_namespace$
+| timechart span=5m count by sourceIPs{} useother=f</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_src">$click.name2$</set>
+          <set token="form.filter_src">$click.name2$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+      <p>
+          Click on a value in the legend to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Activity Over Time by Username</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_statuscode$ $filter_resource$ $filter_namespace$
+| timechart span=5m count by user.username useother=f</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_user">$click.name2$</set>
+          <set token="form.filter_user">$click.name2$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+      <p>
+          Click on a value for additional context.
+      </p>
+      </html>
+      <chart>
+        <title>'kubectl exec' Activity by Username</title>
+        <search>
+          <query>`k8-audit-index` objectRef.subresource=exec 
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;"
+| chart count over user.username by Command useother=f
+| rename user.username AS Username</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="show_exec">true</set>
+          <unset token="show_all"></unset>
+          <unset token="show_failed"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+          <set token="filter_user">$click.value$</set>
+          <set token="form.filter_user">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  <row depends="$show_exec$">
+    <panel>
+      <title>'kubectl exec' Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ $filter_statuscode$ objectRef.subresource=exec
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ $filter_statuscode$ objectRef.subresource=exec
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_namespace$ $filter_statuscode$ objectRef.subresource=exec
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name objectRef.namespace verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.namespace AS "Namespace" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+      <p>
+          Click on a value to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Namespace Distribution</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| stats count by objectRef.namespace</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_namespace">$click.value$</set>
+          <set token="form.filter_namespace">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+      <p>
+          Click on a value to apply filters to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Action / Verb Distribution</title>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| chart count over verb by sourceIPs{} useother=f</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_action">$click.value</set>
+          <set token="form.filter_action">$click.value$</set>
+          <set token="filter_src">$click.name2$</set>
+          <set token="form.filter_src">$click.name2$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <map>
+        <search>
+          <query>`k8-audit-index` $filter_user$ $filter_action$ $filter_src$ $filter_resource$ $filter_statuscode$ $filter_namespace$
+| iplocation allfields=true sourceIPs{} 
+| geostats count by verb</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="mapping.map.center">(28.92,-47.81)</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">2</option>
+        <option name="mapping.type">marker</option>
+        <drilldown>
+          <set token="lat_value">$click.lat.value$</set>
+          <set token="lon_value">$click.lon.value$</set>
+          <set token="map.click.south">$click.bounds.south$</set>
+          <set token="map.click.east">$click.bounds.east$</set>
+          <set token="map.click.north">$click.bounds.north$</set>
+          <set token="map.click.west">$click.bounds.west$</set>
+          <set token="show_map_details">true</set>
+          <unset token="show_exec"></unset>
+          <unset token="show_all"></unset>
+          <unset token="show_failed"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+        </drilldown>
+      </map>
+    </panel>
+  </row>
+  <row depends="$show_map_details$">
+    <panel>
+      <title>Activity from Lat Long ($lat_value$, $lon_value$)</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-audit-index` 
+| iplocation sourceIPs{} 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-audit-index` 
+| iplocation sourceIPs{} 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row depends="$show_map_details$">
+    <panel>
+      <single>
+        <title>City</title>
+        <search>
+          <query>`k8-audit-index` 
+| iplocation sourceIPs{} 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| eval City=if(isnull(City) OR City=="", "Unknown", City)
+| table City</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+      <single>
+        <title>Region</title>
+        <search>
+          <query>`k8-audit-index` 
+| iplocation sourceIPs{} 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| eval Region=if(isnull(Region) OR Region=="", "Unknown", Region)
+| table Region</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+      <single>
+        <title>Country</title>
+        <search>
+          <query>`k8-audit-index` 
+| iplocation sourceIPs{} 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| eval Country=if(isnull(Country) OR Country=="", "Unknown", Country)
+| table Country</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row depends="$show_map_details$">
+    <panel>
+      <table>
+        <search>
+          <done>
+            <condition match=" 'job.resultCount' &gt; 0">
+              <set token="title">$result.City$</set>
+            </condition>
+            <condition>
+              <set token="title">"No Data"</set>
+            </condition>
+          </done>
+          <query>`k8-audit-index` 
+| iplocation sourceIPs{} 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$ 
+| eval City=if(isnull(City) OR City=="", "Unknown", City)
+| eval Region=if(isnull(Region) OR Region=="", "Unknown", Region)
+| eval Country=if(isnull(Country) OR Country=="", "Unknown", Country)
+| table _time user.username sourceIPs{} objectRef.name objectRef.namespace verb objectRef.resource kind objectRef.subresource requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" City Region Country
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.namespace AS "Namespace" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

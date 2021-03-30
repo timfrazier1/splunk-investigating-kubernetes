@@ -1,0 +1,784 @@
+<form hideEdit="false">
+  <label>K8s Pod HTTP Traffic Investigation</label>
+  <fieldset submitButton="false">
+    <input type="time" token="period" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>0</earliest>
+        <latest></latest>
+      </default>
+    </input>
+    <input type="text" token="filter_src" searchWhenChanged="true">
+      <label>Remote Client IP Address</label>
+      <prefix>src="</prefix>
+      <suffix>"</suffix>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="multiselect" token="filter_method" searchWhenChanged="true">
+      <label>HTTP Method</label>
+      <choice value="*">Any</choice>
+      <choice value="&quot;&quot;">None</choice>
+      <default>*</default>
+      <valuePrefix>http_method=</valuePrefix>
+      <delimiter> OR </delimiter>
+      <initialValue>*</initialValue>
+      <fieldForLabel>http_method</fieldForLabel>
+      <fieldForValue>http_method</fieldForValue>
+      <change>
+        <condition label="Any">
+          <set token="filter_method">(http_method=* OR NOT http_method=*)</set>
+        </condition>
+      </change>
+      <search>
+        <query>`k8-stream-index` sourcetype=stream:http $filter_src$  $filter_statuscode$ $filter_user_agent$ | stats count by http_method</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+    </input>
+    <input type="multiselect" token="filter_user_agent" searchWhenChanged="true">
+      <label>HTTP User Agent</label>
+      <choice value="*">Any</choice>
+      <choice value="">None</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <valuePrefix>http_user_agent="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <fieldForLabel>http_user_agent</fieldForLabel>
+      <fieldForValue>http_user_agent</fieldForValue>
+      <change>
+        <condition label="Any">
+          <set token="filter_user_agent">(http_user_agent=* OR NOT http_user_agent=*)</set>
+        </condition>
+      </change>
+      <search>
+        <query>index=* sourcetype=stream:http $filter_src$ $filter_method$ $filter_statuscode$ | stats count by http_user_agent</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+      <delimiter> </delimiter>
+    </input>
+    <input type="multiselect" token="filter_statuscode" searchWhenChanged="true">
+      <label>Status Code</label>
+      <choice value="*">Any</choice>
+      <choice value="&quot;&quot;">None</choice>
+      <default>*</default>
+      <valuePrefix>status=</valuePrefix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>status</fieldForLabel>
+      <fieldForValue>status</fieldForValue>
+      <change>
+        <condition label="Any">
+          <set token="filter_statuscode">(status=* OR NOT status=*)</set>
+        </condition>
+      </change>
+      <search>
+        <query>`k8-stream-index` sourcetype=stream:http $filter_src$ $filter_method$ $filter_user_agent$
+| stats count by status</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="multiselect" token="filter_namespace" searchWhenChanged="true">
+      <label>Namespace</label>
+      <choice value="*">Any</choice>
+      <default>*</default>
+      <prefix>metadata.namespace="</prefix>
+      <suffix>"</suffix>
+      <initialValue>*</initialValue>
+      <delimiter>OR</delimiter>
+      <fieldForLabel>metadata.namespace</fieldForLabel>
+      <fieldForValue>metadata.namespace</fieldForValue>
+      <change>
+        <condition label="Any">
+          <set token="filter_namespace">(metadata.namespace=* OR NOT metadata.namespace=*)</set>
+        </condition>
+      </change>
+      <search>
+        <query>`k8-objects-index` sourcetype="kube:objects:pods"| stats count by metadata.namespace</query>
+        <earliest>$period.earliest$</earliest>
+        <latest>$period.latest$</latest>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <html>
+      <p>
+          <b>PREREQUISITE</b>: Must use Splunk Stream and Splunk Connect for Kubernetes (https://splunkbase.splunk.com/app/4497/) for getting data in.<br/>
+          <b>IMPORTANT</b>: To use this dashboard, modify the<font face="courier"> k8-audit-index </font>search macro to the index and sourcetype for your audit logs from kube-apiserver.
+      </p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <search>
+          <query>`k8-stream-index` $filter_src$ source=stream:http $filter_method$   $filter_statuscode$ $filter_user_agent$
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">MATCHING RESULTS</option>
+        <drilldown>
+          <set token="show_all">true</set>
+          <unset token="show_failed"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_user_agent$ status&gt;=400 
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">HTTP STATUS &gt;=400 ACTIVITY COUNT</option>
+        <drilldown>
+          <set token="show_failed">true</set>
+          <unset token="show_all"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <title>403 Forbidden</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_user_agent$ status=403 
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">FORBIDDEN ACTIVITY COUNT</option>
+        <drilldown>
+          <set token="show_forbid">true</set>
+          <unset token="show_failed"></unset>
+          <unset token="show_all"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_unauthorized"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+    <panel>
+      <html>
+      <p>Click on the numeric value for the event list.</p>
+      </html>
+      <single>
+        <title>401 Unauthorized</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_user_agent$ status=401
+| stats count</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">UNAUTHORIZED ACTIVITY COUNT</option>
+        <drilldown>
+          <set token="show_unauthorized">true</set>
+          <unset token="show_failed"></unset>
+          <unset token="show_all"></unset>
+          <unset token="show_exec"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_map_details"></unset>
+        </drilldown>
+      </single>
+    </panel>
+  </row>
+  <row depends="$show_failed$">
+    <panel>
+      <title>Failed HTTP Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_user_agent$ status&gt;=400
+| join dest_ip 
+    [ search `k8-objects-index` 
+    | rename status.podIP AS dest_ip 
+    | fields dest_ip metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_user_agent$ status&gt;=400
+| join dest_ip 
+    [ search `k8-objects-index` 
+    | rename status.podIP AS dest_ip 
+    | fields dest_ip metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_user_agent$ status&gt;=400
+| join dest_ip 
+    [ search `k8-objects-index`  
+    | rename status.podIP AS dest_ip 
+    | fields dest_ip metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| table _time src_ip dest_ip status http_method url http_user_agent metadata.name metadata.namespace metadata.labels.app metadata.labels.name capture_hostname network_interface 
+| dedup _time src_ip dest_ip status http_method url http_user_agent metadata.name metadata.namespace metadata.labels.app metadata.labels.name capture_hostname network_interface 
+| rename dest_ip AS "Pod IP", src_ip AS "Remote Client IP", status AS "Status", http_method as "Method", url AS URL, http_user_agent AS "User Agent", capture_hostname AS "Node Hostname", network_interface AS "Network Interface", metadata.name AS "Pod Name", metadata.namespace AS "Namespace", metadata.labels.app AS "Label-App", metadata.labels.name AS "Label-Name"
+| sort -_time</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_all$">
+    <panel>
+      <title>Pod Inbound HTTP Traffic Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_user_agent$
+| join dest_ip 
+    [ search `k8-objects-index` 
+    | rename status.podIP AS dest_ip 
+    | fields dest_ip metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_user_agent$
+| join dest_ip 
+    [ search `k8-objects-index` $filter_namespace$
+    | rename status.podIP AS dest_ip 
+    | fields dest_ip metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <table depends="$show_all$">
+        <search>
+          <query>index=* sourcetype=stream* source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_user_agent$ 
+| join dest_ip 
+    [ search `k8-objects-index` sourcetype="kube:objects:pods"
+    | rename status.podIP AS podIP | rename status.hostIP AS hostIP
+    | eval dest_ip = coalesce(podIP, hostIP)
+    | fields dest_ip podIP hostIP metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| table _time src_ip podIP hostIP status http_method url http_user_agent metadata.name metadata.namespace metadata.labels.app metadata.labels.name capture_hostname network_interface 
+| rename podIP AS "Pod IP", hostIP AS "Host IP", src_ip AS "Remote Client IP", stats AS Status, http_method as "Method", url AS URL, http_user_agent AS "User Agent", capture_hostname AS "Node Hostname", network_interface AS "Network Interface", metadata.name AS "Pod Name", metadata.namespace AS "Namespace", metadata.labels.app AS "Label-App", metadata.labels.name AS "Label-Name" 
+| sort -_time</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+        <drilldown>
+          <condition match="'row.Resource Type' == &quot;pods&quot;">
+            <set token="client_drilldown">$row.Remote Client IP$</set>
+          </condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_all$">
+    <panel>
+      <title>Pod Outbound HTTP Traffic Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_user_agent$
+| join src 
+    [ search `k8-objects-index` sourcetype="kube:objects:pods"
+    | rename status.podIP AS podIP | rename status.hostIP AS hostIP
+    | eval src = coalesce(podIP, hostIP)
+    | fields src podIP hostIP metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_user_agent$
+| join src 
+    [ search `k8-objects-index` sourcetype="kube:objects:pods"
+    | rename status.podIP AS podIP | rename status.hostIP AS hostIP
+    | eval src = coalesce(podIP, hostIP)
+    | fields src podIP hostIP metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <table depends="$show_all$">
+        <search>
+          <query>index=* sourcetype=stream* source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_user_agent$ 
+| join src 
+    [ search `k8-objects-index` sourcetype="kube:objects:pods"
+    | rename status.podIP AS podIP | rename status.hostIP AS hostIP
+    | eval src = coalesce(podIP, hostIP)
+    | fields src podIP hostIP metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| table _time podIP hostIP dest_ip status http_method url http_user_agent metadata.name metadata.namespace metadata.labels.app metadata.labels.name capture_hostname network_interface 
+| rename podIP AS "Pod IP", hostIP AS "Host IP", dest_ip AS "Destination IP", stats AS Status, http_method as "Method", url AS URL, http_user_agent AS "User Agent", capture_hostname AS "Node Hostname", network_interface AS "Network Interface", metadata.name AS "Pod Name", metadata.namespace AS "Namespace", metadata.labels.app AS "Label-App", metadata.labels.name AS "Label-Name" 
+| sort -_time</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+        <drilldown>
+          <condition match="'row.Resource Type' == &quot;pods&quot;">
+            <set token="client_drilldown">$row.Remote Client IP$</set>
+          </condition>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_forbid$">
+    <panel>
+      <title>Forbidden Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=403
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_unauthorized$">
+    <panel>
+      <title>Unauthorized Activity Overview</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+      </single>
+      <table>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_resource$ $filter_namespace$ responseStatus.code=401
+| rex field=requestURI "\?command=(?&lt;Command&gt;[^&amp;]+)&amp;" 
+| eval Command = replace(Command,"%2F", "/") 
+| table _time user.username sourceIPs{} objectRef.name verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="drilldown">cell</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+        <format type="color" field="Authorization Decision">
+          <colorPalette type="map">{"forbid":#AF575A}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+      <p>
+          Click on a value in the legend to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Status Codes Over Time</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_namespace$ $filter_user_agent$
+| timechart count by status
+| rename status AS "HTTP Response Code"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_statuscode">$click.name2$</set>
+          <set token="form.filter_statuscode">$click.name2$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+      <p>
+          Click on a value in the legend to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Activity Over Time by Remote Client IP</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_namespace$ $filter_user_agent$
+| timechart span=5m count by src useother=f</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Event Count</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_src">$click.name2$</set>
+          <set token="form.filter_src">$click.name2$</set>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+      <p>
+          Click on a value to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>Namespace Distribution</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$  $filter_statuscode$ $filter_namespace$ $filter_user_agent$ 
+| join dest_ip 
+    [ search `k8-objects-index` 
+    | rename status.podIP AS dest_ip 
+    | fields dest_ip metadata.name metadata.namespace metadata.labels.app metadata.labels.name ] 
+| stats count by metadata.namespace</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_namespace">$click.value$</set>
+          <set token="form.filter_namespace">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+      <p>
+          Click on a value to apply filter to the dashboard.
+      </p>
+      </html>
+      <chart>
+        <title>User Agent Distribution</title>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_namespace$ $filter_user_agent$
+| stats count by http_user_agent</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="filter_user_agent">$click.value$</set>
+          <set token="form.filter_user_agent">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <map>
+        <search>
+          <query>`k8-stream-index` source=stream:http $filter_method$ $filter_src$ $filter_statuscode$ $filter_namespace$ $filter_user_agent$
+| iplocation allfields=true src 
+| geostats count by http_method</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="mapping.map.center">(28.92,-47.81)</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">2</option>
+        <option name="mapping.type">marker</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <set token="lat_value">$click.lat.value$</set>
+          <set token="lon_value">$click.lon.value$</set>
+          <set token="map.click.south">$click.bounds.south$</set>
+          <set token="map.click.east">$click.bounds.east$</set>
+          <set token="map.click.north">$click.bounds.north$</set>
+          <set token="map.click.west">$click.bounds.west$</set>
+          <set token="show_map_details">true</set>
+          <unset token="show_exec"></unset>
+          <unset token="show_all"></unset>
+          <unset token="show_failed"></unset>
+          <unset token="show_forbid"></unset>
+          <unset token="show_unauthorized"></unset>
+        </drilldown>
+      </map>
+    </panel>
+  </row>
+  <row depends="$show_map_details$">
+    <panel>
+      <title>Activity from Lat Long ($lat_value$, $lon_value$)</title>
+      <single>
+        <title>Earliest Event</title>
+        <search>
+          <query>`k8-stream-index` 
+| iplocation src 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| stats min(_time) AS earliestDate 
+| convert timeformat="%F %T" ctime(earliestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Most Recent Event</title>
+        <search>
+          <query>`k8-stream-index` 
+| iplocation src
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| stats max(_time) AS latestDate 
+| convert timeformat="%F %T" ctime(latestDate)</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row depends="$show_map_details$">
+    <panel>
+      <single>
+        <title>City</title>
+        <search>
+          <query>`k8-stream-index` 
+| iplocation src
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| eval City=if(isnull(City) OR City=="", "Unknown", City)
+| table City</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Region</title>
+        <search>
+          <query>`k8-stream-index` 
+| iplocation src 
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| eval Region=if(isnull(Region) OR Region=="", "Unknown", Region)
+| table Region</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+      <single>
+        <title>Country</title>
+        <search>
+          <query>`k8-stream-index` 
+| iplocation src
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$
+| eval Country=if(isnull(Country) OR Country=="", "Unknown", Country)
+| table Country</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+  </row>
+  <row depends="$show_map_details$">
+    <panel>
+      <table>
+        <search>
+          <done>
+            <condition match=" 'job.resultCount' &gt; 0">
+              <set token="title">$result.City$</set>
+            </condition>
+            <condition>
+              <set token="title">"No Data"</set>
+            </condition>
+          </done>
+          <query>`k8-stream-index` 
+| iplocation src
+| search lat&gt;=$map.click.south$ lat&lt;=$map.click.north$ lon&gt;=$map.click.west$ lon&lt;=$map.click.east$ 
+| eval City=if(isnull(City) OR City=="", "Unknown", City)
+| eval Region=if(isnull(Region) OR Region=="", "Unknown", Region)
+| eval Country=if(isnull(Country) OR Country=="", "Unknown", Country)
+| fields _time user.username src objectRef.name verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" City Region Country
+| table _time user.username sourceIPs{} objectRef.name verb objectRef.resource kind objectRef.subresource Command requestURI userAgent responseStatus.code "annotations.authorization.k8s.io/decision" "annotations.authorization.k8s.io/reason" 
+| sort -_time 
+| rename user.username AS Username sourceIPs{} AS "Remote Client IP" objectRef.name AS "Involved Object" objectRef.resource AS "Resource Type" kind AS Kind objectRef.subresource AS "Secondary Resource" requestURI AS "Request URI" userAgent AS "User Agent" verb AS Verb responseStatus.code AS "Status Code" "annotations.authorization.k8s.io/decision" AS "Authorization Decision" "annotations.authorization.k8s.io/reason" AS "Authorization Reason"</query>
+          <earliest>$period.earliest$</earliest>
+          <latest>$period.latest$</latest>
+        </search>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Verb">
+          <colorPalette type="map">{"create":#EC9960,"delete":#DC4E41,"get":#62B3B2,"list":#B6C75A,"patch":#5A4575,"watch":#708794,"update":#F8BE34}</colorPalette>
+        </format>
+        <format type="color" field="Secondary Resource">
+          <colorPalette type="map">{"exec":#DC4E41}</colorPalette>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

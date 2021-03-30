@@ -1,0 +1,5 @@
+<nav search_view="search">
+  <view name="k8s_user_investigation" default='true' />
+  <view name="k8s_traffic_investigation" />
+  <view name="search" />
+</nav>

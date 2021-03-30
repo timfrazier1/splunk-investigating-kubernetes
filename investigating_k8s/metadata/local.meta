@@ -1,0 +1,21 @@
+[app/ui]
+version = 8.0.4
+modtime = 1602273472.824177000
+
+[app/launcher]
+version = 8.0.4
+modtime = 1602273472.825711000
+
+[workflow_actions/K8s%20Pod%20HTTP%20Investigation]
+access = read : [ * ], write : [ admin ]
+export = system
+owner = admin
+version = 8.0.4
+modtime = 1605047225.297248000
+
+[workflow_actions/K8s%20User%20Investigation]
+access = read : [ * ], write : [ admin ]
+export = system
+owner = admin
+version = 8.0.4
+modtime = 1605047219.812305000
